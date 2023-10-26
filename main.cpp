@@ -3,9 +3,8 @@
 #include <sstream>
 #include <thread>
 #include <string>
-#include <openssl/md5.h>
-#include <iomanip>
 #include <vector>
+#include "hashing.h"
 
 int getSize(std::ifstream &file) {
 	int reset = file.tellg();
@@ -14,27 +13,11 @@ int getSize(std::ifstream &file) {
 	return size;
 }
 
-std::string md5(const std::string &str) {
-    unsigned char hash[MD5_DIGEST_LENGTH];
-
-    MD5_CTX md5;
-    MD5_Init(&md5);
-    MD5_Update(&md5, str.c_str(), str.size());
-    MD5_Final(hash, &md5);
-
-    std::stringstream ss;
-
-    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
-        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(hash[i]);
-    }
-    return ss.str();
-}
-
-void crack(std::string hash, std::stringstream &ss) {
+void crack(std::string hash, std::stringstream &ss, std::function<std::string(std::string)> hash_mode) {
 	std::string word;
 	while (!ss.eof()) {
 		ss >> word;
-		if (md5(word) == hash) {
+		if (hash_mode(word) == hash) {
 			std::cout << "\033[u\033[K" << hash << " : \e[41m"<< word << "\e[0m\n";
 			std::exit(0);
 		}
@@ -42,9 +25,11 @@ void crack(std::string hash, std::stringstream &ss) {
 }
 
 int main(int argc, char** argv) {
+	std::string hash = argv[1];
+	std::string word;
 
 	if (argc < 4) {
-		std::cout << "./tcrack <hash> /path/to/wordlist <threads>\n";
+		std::cout << "./tcrack <hash> /path/to/wordlist <threads> (optional hash type)\n";
 		std::exit(-1);
 	}
 
@@ -65,13 +50,28 @@ int main(int argc, char** argv) {
 		std::exit(-1);
 	}
 
+	std::function<std::string(std::string)> hash_mode;
+	std::string hash_name;
+
+	if (argc > 4) {
+		hash_name = argv[4];
+	} else {
+		hash_name = hashIdentify(hash);
+	}
+
+	hash_mode = hashSet(hash_name);
+
+	std::cout << "\033[u\033[KUsing \"" << hash_name << "\" mode...\n\033[s";
+
 	std::cout << "\033[u\033[KSplitting into " << argv[3] << " threads... (this will use a lot of ram)\n";
 
 	int amount = std::stoi(argv[3]);
 	std::ifstream wordlist;
 	wordlist.open(argv[2]);
-	std::string hash = argv[1];
-	std::string word;
+	if (wordlist.fail()) {
+		std::cerr << "\033[u\033[KCould not open file " << argv[2] << "\n";
+		std::exit(1);
+	}
 
 	int size = 0;
 	
@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
 	std::cout << "\033[u\033[KArmed and starting... (your ram is stable now)\n";
 
 	for (int i=0; i<amount; i++) {
-		thread_vector.push_back(std::thread(crack, std::ref(hash), std::ref(stream_vector.at(i))));
+		thread_vector.push_back(std::thread(crack, std::ref(hash), std::ref(stream_vector.at(i)), std::ref(hash_mode)));
 	}
 
 	for (int i=0; i<amount; i++) {
