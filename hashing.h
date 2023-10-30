@@ -51,6 +51,21 @@ std::string sha1(const std::string str)
     return ss.str();
 }
 
+std::string sha512(const std::string str)
+{
+    unsigned char hash[SHA512_DIGEST_LENGTH];
+    SHA512_CTX sha512;
+    SHA512_Init(&sha512);
+    SHA512_Update(&sha512, str.c_str(), str.size());
+    SHA512_Final(hash, &sha512);
+	std::stringstream ss;
+    for(int i = 0; i < SHA512_DIGEST_LENGTH; i++)
+    {
+        ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
+    }
+    return ss.str();
+}
+
 std::string hashIdentify(std::string hash) {
 	switch(hash.size()){
 		case 32:
@@ -59,6 +74,8 @@ std::string hashIdentify(std::string hash) {
 			return "sha1";
 		case 64:
 			return "sha256";
+		case 128:
+			return "sha512";
 		default:
 			std::cerr << "\033[u\033[KCould not identify hash...\n";
 			std::exit(-1);
@@ -70,6 +87,7 @@ std::function<std::string(std::string)> hashSet(std::string hash_name) {
 	hash_map["md5"] = md5;
 	hash_map["sha256"] = sha256;
 	hash_map["sha1"] = sha1;
+	hash_map["sha512"] = sha512;
 	if (!hash_map.count(hash_name)) {
 		std::cerr << "\033[u\033[KNo hash \"" << hash_name << "\" found\n";
 		std::exit(-1);

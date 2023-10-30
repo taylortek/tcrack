@@ -25,13 +25,18 @@ void crack(std::string hash, std::stringstream &ss, std::function<std::string(st
 }
 
 int main(int argc, char** argv) {
-	std::string hash = argv[1];
-	std::string word;
-
 	if (argc < 4) {
-		std::cout << "./tcrack <hash> /path/to/wordlist <threads> (optional hash type)\n";
+		std::cout << "./tcrack <hash> /path/to/wordlist <threads> (optional hash type)\n\n";
+		std::cout << R"(Formats:
+	md5
+	sha256
+	sha512
+	sha1)" << "\n";
 		std::exit(-1);
 	}
+
+	std::string hash = argv[1];
+	std::string word;
 
 	std::cout << "\e[1m" << R"(
 
